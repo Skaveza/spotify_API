@@ -20,42 +20,48 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchUserData();
+    _fetchUserData(context);
   }
 
-  Future<void> _fetchUserData() async {
-    try {
-      final userProfileResponse = await http.get(
-        Uri.parse("https://api.spotify.com/v1/me"),
-        headers: {'Authorization': 'Bearer ${widget.accessToken}'},
-      );
+ Future<void> _fetchUserData(BuildContext context) async {
+  try {
+    final userProfileResponse = await http.get(
+      Uri.parse("https://api.spotify.com/v1/me"),
+      headers: {'Authorization': 'Bearer ${widget.accessToken}'},
+    );
 
-      if (userProfileResponse.statusCode == 200) {
-        _userProfile = json.decode(userProfileResponse.body);
-      } else {
-        throw Exception("Failed to fetch user profile: ${userProfileResponse.statusCode}");
-      }
+    if (userProfileResponse.statusCode == 200) {
+      _userProfile = json.decode(userProfileResponse.body);
+    } else {
+      throw Exception("Failed to fetch user profile: ${userProfileResponse.statusCode}");
+    }
 
-      final userPlaylistsResponse = await http.get(
-        Uri.parse("https://api.spotify.com/v1/me/playlists"),
-        headers: {'Authorization': 'Bearer ${widget.accessToken}'},
-      );
+    // Check if the widget is still mounted before using context
+    if (!mounted) return;
 
-      if (userPlaylistsResponse.statusCode == 200) {
-        _playlists = json.decode(userPlaylistsResponse.body)['items'];
-      } else {
-        throw Exception("Failed to fetch playlists: ${userPlaylistsResponse.statusCode}");
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching data: $e')),
-      );
-    } finally {
+    final userPlaylistsResponse = await http.get(
+      Uri.parse("https://api.spotify.com/v1/me/playlists"),
+      headers: {'Authorization': 'Bearer ${widget.accessToken}'},
+    );
+
+    if (userPlaylistsResponse.statusCode == 200) {
+      _playlists = json.decode(userPlaylistsResponse.body)['items'];
+    } else {
+      throw Exception("Failed to fetch playlists: ${userPlaylistsResponse.statusCode}");
+    }
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error fetching data: $e')),
+    );
+  } finally {
+    if (mounted) {
       setState(() {
         _isLoading = false;
       });
     }
   }
+}
 
   void _onBottomNavTapped(int index) {
     setState(() {

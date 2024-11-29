@@ -1,14 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_web_auth/flutter_web_auth.dart';
+import 'package:logging/logging.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
-  static const String _clientId = "364206692f0e4b0aad5a4234f3b2d161";
-  static const String _redirectUri = "myflutterapp://callback";
-  static String get _scopes => Uri.encodeComponent("user-read-private playlist-read-private");
+  @override
+  LoginScreenState createState() => LoginScreenState();
+}
 
-  Future<void> _authenticateUser(BuildContext context) async {
+class LoginScreenState extends State<LoginScreen> {
+  final Logger _logger = Logger('LoginScreen');
+  final String _clientId = "364206692f0e4b0aad5a4234f3b2d161";
+  final String _redirectUri = "spotifyflutterapp://callback";
+  final String _scopes = 
+    "user-read-private "
+    "user-read-email "
+    "user-library-read "
+    "user-library-modify "
+    "playlist-read-private "
+    "playlist-read-collaborative "
+    "playlist-modify-private "
+    "playlist-modify-public "
+    "user-read-playback-state "
+    "user-modify-playback-state "
+    "user-read-currently-playing "
+    "user-follow-read "
+    "user-follow-modify "
+    "user-top-read";
+
+ @override
+void initState() {
+  super.initState();
+  if (Logger.root.level == Level.OFF) {
+    Logger.root.level = Level.ALL; // Enable all logging levels
+    Logger.root.onRecord.listen((record) {
+      debugPrint('${record.level.name}: ${record.time}: ${record.message}');
+    });
+  }
+  _logger.info("LoginScreen initialized.");
+}
+
+  Future<void> _authenticateUser() async {
+    _logger.info("Authentication initiated");
     final authUrl = 
         "https://accounts.spotify.com/authorize?client_id=$_clientId"
         "&response_type=token"
@@ -16,7 +50,6 @@ class LoginScreen extends StatelessWidget {
         "&scope=$_scopes";
 
     try {
-      // Show loading indicator
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -25,10 +58,11 @@ class LoginScreen extends StatelessWidget {
 
       final result = await FlutterWebAuth.authenticate(
         url: authUrl,
-        callbackUrlScheme: "myflutterapp",
+        callbackUrlScheme: "spotifyflutterapp",
       );
 
-      // Extract the access token from the URL fragment
+      if (!mounted) return;
+
       final accessToken = Uri.parse(result).fragment
           .split("&")
           .firstWhere((element) => element.startsWith("access_token"), orElse: () => "")
@@ -38,36 +72,27 @@ class LoginScreen extends StatelessWidget {
         throw Exception("Failed to retrieve access token.");
       }
 
+      _logger.info("Successfully authenticated user.");
       Navigator.pushReplacementNamed(context, '/home', arguments: accessToken);
     } catch (e) {
+      if (!mounted) return;
+      _logger.severe("Authentication failed: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Authentication failed: $e')),
       );
     } finally {
-      Navigator.of(context).pop(); // Dismiss the loading indicator
+      if (mounted) Navigator.of(context).pop(); 
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Spotify Login"),
-      ),
+      appBar: AppBar(title: Text("Login")),
       body: Center(
         child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            foregroundColor: Colors.pink,
-            backgroundColor: Colors.white,
-            elevation: 5,
-            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            textStyle: ( const TextStyle(
-              fontWeight: FontWeight.bold, 
-              fontSize: 16,)
-            ),
-          ),
-          onPressed: () => _authenticateUser(context),
-          child: const Text("Login with Spotify"),
+          onPressed: _authenticateUser,
+          child: Text("Login with Spotify"),
         ),
       ),
     );
