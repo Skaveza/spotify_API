@@ -41,13 +41,18 @@ class SpotifyApp extends StatelessWidget {
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/':
+            // Initial route is login, no arguments required here
             return MaterialPageRoute(builder: (_) => const LoginScreen());
+          
           case '/home':
+            // Extracting accessToken from the arguments to pass to HomeScreen
             final accessToken = settings.arguments as String;
             return MaterialPageRoute(
               builder: (_) => HomeScreen(accessToken: accessToken),
             );
+
           case '/playlist':
+            // Extracting playlistId and accessToken to pass to PlaylistScreen
             final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
               builder: (_) => PlaylistScreen(
@@ -55,7 +60,9 @@ class SpotifyApp extends StatelessWidget {
                 accessToken: args['accessToken'],
               ),
             );
+
           default:
+            // Default route should return to LoginScreen
             return MaterialPageRoute(builder: (_) => const LoginScreen());
         }
       },

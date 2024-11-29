@@ -33,10 +33,19 @@ class PlaylistScreenState extends State<PlaylistScreen> {
         headers: {'Authorization': 'Bearer ${widget.accessToken}'},
       );
 
-      setState(() {
-        _playlistData = json.decode(response.body);
-        _isLoading = false;
-      });
+      // Check for successful response
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print("Playlist Data: $data");
+
+        // Update state with playlist data
+        setState(() {
+          _playlistData = data;
+          _isLoading = false;
+        });
+      } else {
+        throw Exception("Failed to load playlist: ${response.reasonPhrase}");
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -55,28 +64,34 @@ class PlaylistScreenState extends State<PlaylistScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: _playlistData?['tracks']['items'].length ?? 0,
-              itemBuilder: (context, index) {
-                final track = _playlistData!['tracks']['items'][index]['track'];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                  child: ListTile(
-                    title: Text(
-                      track['name'],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold, 
-                        color: Colors.pink,
+          : (_playlistData?['tracks']['items'].isEmpty ?? true)
+              ? const Center(child: Text("No tracks available in this playlist."))
+              : ListView.builder(
+                  itemCount: _playlistData?['tracks']['items'].length ?? 0,
+                  itemBuilder: (context, index) {
+                    final track = _playlistData!['tracks']['items'][index]['track'];
+                    final artistName = track['artists']?.isNotEmpty == true 
+                        ? track['artists'][0]['name'] 
+                        : 'Unknown Artist';
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                      child: ListTile(
+                        title: Text(
+                          track['name'] ?? 'Unknown Track',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold, 
+                            color: Colors.pink,
+                          ),
+                        ),
+                        subtitle: Text(
+                          artistName,
+                          style: const TextStyle(color: Colors.black54),
+                        ),
                       ),
-                    ),
-                    subtitle: Text(
-                      track['artists'][0]['name'],
-                      style: const TextStyle(color: Colors.black54),
-                    ),
-                  ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
     );
   }
 }
